@@ -1,6 +1,7 @@
 package com.gjn.swipebacklibrary;
 
 import android.app.Activity;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 /**
@@ -16,21 +17,39 @@ public class SwipeHelper {
     private SwipeBackLayout.SwipeBackListenr swipeBackListenr;
 
 
-    public SwipeHelper(Activity activity) {
-        this.activity = activity;
+    public SwipeHelper(Activity act) {
+        activity = act;
     }
 
-    public void onActivityCreate(){
+    public void bindActivity(){
         swipeBackLayout = new SwipeBackLayout(activity);
-        swipeBackLayout.setSwipeBackListenr(swipeBackListenr);
-//        swipeBackLayout.attachToActivity();
+
+        if (swipeBackListenr == null) {
+            swipeBackLayout.setSwipeBackListenr(new SwipeBackLayout.SwipeBackListenr() {
+                @Override
+                public void onFinish() {
+                    activity.finish();
+                    activity.overridePendingTransition(0,0);
+                }
+            });
+        }else {
+            swipeBackLayout.setSwipeBackListenr(swipeBackListenr);
+        }
         if (activity.isTaskRoot()) {
-            Log.d(TAG, activity.getClass().getSimpleName()+"不绑定");
             swipeBackLayout.initDecorViewChild();
         }else {
-            Log.d(TAG, activity.getClass().getSimpleName()+"绑定侧滑");
             swipeBackLayout.attachToActivity();
         }
+    }
+
+    public void unBindActivity(){
+        if (!activity.isTaskRoot()) {
+            swipeBackLayout.unAttachToActivity();
+        }
+    }
+
+    public SwipeBackLayout getSwipeBackLayout() {
+        return swipeBackLayout;
     }
 
     public SwipeHelper setSwipeBackListenr(SwipeBackLayout.SwipeBackListenr swipeBackListenr) {

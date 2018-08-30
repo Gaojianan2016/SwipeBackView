@@ -13,11 +13,17 @@ allprojects {
 
 
 dependencies {
-    implementation 'com.github.Gaojianan2016:SwipeBackView:1.0.0'
+    implementation 'com.github.Gaojianan2016:SwipeBackView:1.0.1'
 }
 ```
 
 # 基本使用
+
+style
+```
+<item name="android:windowIsTranslucent">true</item>
+```
+
 BaseActivity
 ```
 package com.gjn.swipebackview;

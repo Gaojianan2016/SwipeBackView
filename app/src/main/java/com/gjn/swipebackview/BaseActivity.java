@@ -6,7 +6,6 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 
 import com.gjn.statusbarlibrary.StatusBarUtils;
-import com.gjn.swipebacklibrary.SwipeBackLayout;
 import com.gjn.swipebacklibrary.SwipeHelper;
 
 /**
@@ -16,6 +15,8 @@ import com.gjn.swipebacklibrary.SwipeHelper;
 
 public abstract class BaseActivity extends AppCompatActivity {
 
+    protected SwipeHelper helper;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -24,14 +25,8 @@ public abstract class BaseActivity extends AppCompatActivity {
         StatusBarUtils.statusBarMode(this, Color.DKGRAY);
         StatusBarUtils.setContentViewFitsSystemWindows(this, true);
 
-        SwipeHelper helper = new SwipeHelper(this);
-        helper.setSwipeBackListenr(new SwipeBackLayout.SwipeBackListenr() {
-            @Override
-            public void onFinish() {
-                finish();
-            }
-        }).onActivityCreate();
-
+        helper = new SwipeHelper(this);
+        helper.bindActivity();
     }
 
     protected abstract int getID();
