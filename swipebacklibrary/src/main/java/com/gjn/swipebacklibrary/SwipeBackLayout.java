@@ -2,15 +2,11 @@ package com.gjn.swipebacklibrary;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.res.TypedArray;
-import android.graphics.Color;
-import android.graphics.Point;
+import android.graphics.Canvas;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,16 +18,19 @@ import android.widget.FrameLayout;
  */
 
 public class SwipeBackLayout extends FrameLayout {
-    private static final String TAG = "SwipeBackLayout";
-
-    public static final int SWIPE_WIDTH = 15;
-
-    private ViewDragHelper mViewDragHelper;
-    private Point curPoint = new Point();
-    private SwipeBackListenr swipeBackListenr;
+    public static final int DEFAULT_SHADOW_COLOR = 0x99000000;
+    public static final int BLACK_COLOR = 0xff000000;
+    public static final int WHITE_COLOR = 0xffffffff;
 
     private ViewGroup mDecorView;
     private View mDecorChild;
+
+    private ViewDragHelper mViewDragHelper;
+    private SwipeBackListenr swipeBackListenr;
+
+    private int mDistance = 0;
+    private int moveDistance;
+    private float mScrollWidth;
 
     public SwipeBackLayout(@NonNull Context context) {
         this(context, null);
@@ -42,9 +41,8 @@ public class SwipeBackLayout extends FrameLayout {
         mViewDragHelper = ViewDragHelper.create(this, new DragCallback());
         //left边缘才能触发
         mViewDragHelper.setEdgeTrackingEnabled(ViewDragHelper.EDGE_LEFT);
-
-        mDecorView = (ViewGroup) ((Activity) context).getWindow().getDecorView();
-        mDecorChild = mDecorView.getChildAt(0);
+        //默认移动150dp距离关闭页面
+        setMoveDistance(150);
     }
 
     @Override
@@ -74,29 +72,69 @@ public class SwipeBackLayout extends FrameLayout {
         }
     }
 
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+        if (mDecorChild != null) {
+            mDecorChild.layout(mDistance, 0, mDistance + mDecorChild.getMeasuredWidth(),
+                    mDecorChild.getMeasuredHeight());
+        }
+    }
+
+    @Override
+    protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
+        //先绘制本身
+        boolean result = super.drawChild(canvas, child, drawingTime);
+        //绘制阴影判断
+        if (child == mDecorChild && mViewDragHelper.getViewDragState() != ViewDragHelper.STATE_IDLE) {
+            drawScrim(canvas, child);
+        }
+        return result;
+    }
+
+    private void drawScrim(Canvas canvas, View child) {
+        final int baseAlpha = (DEFAULT_SHADOW_COLOR & BLACK_COLOR) >>> 24;
+        final int alpha = (int) (baseAlpha * (1 - mScrollWidth));
+        final int color = alpha << 24;
+        canvas.clipRect(0, 0, child.getLeft(), getHeight());
+        canvas.drawColor(color);
+    }
+
+    public void setMoveDistance(int moveDistance) {
+        if (moveDistance > 15) {
+            this.moveDistance = (int) (moveDistance * getResources().getDisplayMetrics().density);
+        }
+    }
+
     public void setSwipeBackListenr(SwipeBackListenr swipeBackListenr) {
         this.swipeBackListenr = swipeBackListenr;
     }
 
     public void attachToActivity() {
-        initDecorViewChild();
+        initDecorView();
         mDecorView.removeView(mDecorChild);
         addView(mDecorChild);
         mDecorView.addView(this);
     }
 
-    public void unAttachToActivity(){
+    public void initDecorView() {
+        mDecorView = (ViewGroup) ((Activity) getContext()).getWindow().getDecorView();
+        mDecorChild = mDecorView.getChildAt(0);
+        mDecorChild.setBackgroundColor(WHITE_COLOR);
+    }
+
+    public void unAttachToActivity() {
         removeAllViews();
         mDecorView.removeView(this);
         mDecorView.addView(mDecorChild);
     }
 
-    public void initDecorViewChild(){
-        TypedArray typedArray = getContext().getTheme().obtainStyledAttributes(new int[]{android.R.attr.windowBackground});
-        int background = typedArray.getResourceId(0,0);
-        typedArray.recycle();
-        mDecorChild.setBackgroundResource(background);
-        mDecorChild.setBackgroundColor(Color.parseColor("#ffffffff"));
+    public abstract static class SwipeBackListenr {
+        public void onStart() {
+        }
+
+        public void onFinish() {
+        }
     }
 
     class DragCallback extends ViewDragHelper.Callback {
@@ -107,31 +145,20 @@ public class SwipeBackLayout extends FrameLayout {
 
         @Override
         public int clampViewPositionHorizontal(@NonNull View child, int left, int dx) {
-            if(left < 0){
-                left = 0;
-            }
-            curPoint.x = left;
-            return left;
-        }
-
-        @Override
-        public int clampViewPositionVertical(@NonNull View child, int top, int dy) {
-            curPoint.y = top;
-            return 0;
+            mDistance = Math.max(0, left);
+            return mDistance;
         }
 
         @Override
         public void onViewReleased(@NonNull View releasedChild, float xvel, float yvel) {
-            //超过1/2
-            if (curPoint.x > getWidth() / 2){
+            //超过关闭距离
+            if (mDistance > moveDistance) {
                 //直接移动到最右边
                 mViewDragHelper.settleCapturedViewAt(getWidth(), 0);
-            }else {
+            } else {
                 //回弹
                 mViewDragHelper.settleCapturedViewAt(0, 0);
             }
-            curPoint.x = 0;
-            curPoint.y = 0;
             invalidate();
         }
 
@@ -139,21 +166,22 @@ public class SwipeBackLayout extends FrameLayout {
         public void onEdgeDragStarted(int edgeFlags, int pointerId) {
             //这里去进行控件捕获
             if (edgeFlags == ViewDragHelper.EDGE_LEFT) {
-                mViewDragHelper.captureChildView( getChildAt(0), pointerId);
+                mViewDragHelper.captureChildView(mDecorChild, pointerId);
+                if (swipeBackListenr != null) {
+                    swipeBackListenr.onStart();
+                }
             }
         }
 
         @Override
         public void onViewPositionChanged(@NonNull View changedView, int left, int top, int dx, int dy) {
+            mScrollWidth = Math.abs((float) left / getWidth());
             if (left >= getWidth()) {
                 if (swipeBackListenr != null) {
                     swipeBackListenr.onFinish();
                 }
             }
+            invalidate();
         }
-    }
-
-    public interface SwipeBackListenr{
-        void onFinish();
     }
 }

@@ -25,8 +25,12 @@ public abstract class BaseActivity extends AppCompatActivity {
         StatusBarUtils.statusBarMode(this, Color.DKGRAY);
         StatusBarUtils.setContentViewFitsSystemWindows(this, true);
 
+        init();
+    }
+
+    protected void init() {
         helper = new SwipeHelper(this);
-        helper.bindActivity();
+        helper.translucentWindowsBackground();
     }
 
     protected abstract int getID();

@@ -11,14 +11,18 @@ import com.gjn.statusbarlibrary.StatusBarUtils;
 public class MainActivity extends BaseActivity {
 
     @Override
+    protected void init() {
+
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         findViewById(R.id.tv_main).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, Senc.class);
-                startActivity(intent);
+                startActivity(new Intent(MainActivity.this, Senc.class));
             }
         });
     }

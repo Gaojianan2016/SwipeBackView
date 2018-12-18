@@ -21,13 +21,10 @@ public class Senc extends BaseActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-//        helper.unBindActivity();
-
         findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(Senc.this, LoginActivity.class);
-                startActivity(intent);
+                startActivity(new Intent(Senc.this, LoginActivity.class));
             }
         });
 
